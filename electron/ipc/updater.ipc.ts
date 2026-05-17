@@ -1,0 +1,52 @@
+import { ipcMain, BrowserWindow } from 'electron'
+import { autoUpdater, UpdateInfo } from 'electron-updater'
+
+const isDev = !!process.env['VITE_DEV_SERVER_URL']
+
+export function setupUpdater(getWindow: () => BrowserWindow | null): void {
+  // En mode dev, on expose des handlers no-op pour ne pas casser le preload
+  if (isDev) {
+    ipcMain.handle('updater:check', () => ({ available: false, devMode: true }))
+    ipcMain.handle('updater:download', () => ({}))
+    ipcMain.handle('updater:install', () => ({}))
+    return
+  }
+
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-available', (info: UpdateInfo) => {
+    getWindow()?.webContents.send('updater:available', {
+      version:      info.version,
+      releaseNotes: info.releaseNotes ?? null,
+    })
+  })
+
+  autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
+    getWindow()?.webContents.send('updater:downloaded', { version: info.version })
+  })
+
+  autoUpdater.on('error', (err: Error) => {
+    console.error('[updater]', err.message)
+  })
+
+  ipcMain.handle('updater:check', async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates()
+      return { available: result !== null, version: result?.updateInfo?.version ?? null }
+    } catch {
+      return { available: false }
+    }
+  })
+
+  ipcMain.handle('updater:download', () => autoUpdater.downloadUpdate())
+
+  ipcMain.handle('updater:install', () => {
+    autoUpdater.quitAndInstall(false, true)
+  })
+
+  // Vérification automatique 15 secondes après le démarrage
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(() => { /* pas de réseau, silencieux */ })
+  }, 15_000)
+}
