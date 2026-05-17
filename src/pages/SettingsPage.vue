@@ -68,6 +68,19 @@
           <dt class="text-gray-500">Version installée</dt>
           <dd class="font-mono font-medium text-gray-800">v{{ appInfo?.version ?? '—' }}</dd>
         </div>
+        <div class="flex justify-between items-center">
+          <dt class="text-gray-500">Fichier de logs</dt>
+          <dd class="flex items-center gap-2">
+            <code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded truncate max-w-xs">{{ appInfo?.logPath ?? '—' }}</code>
+            <button
+              @click="openLogFolder"
+              class="text-xs text-primary-600 hover:text-primary-700 flex-shrink-0"
+              title="Ouvrir le dossier des logs"
+            >
+              Ouvrir
+            </button>
+          </dd>
+        </div>
       </dl>
 
       <div class="mt-4 pt-4 border-t flex items-center gap-3">
@@ -127,6 +140,10 @@ async function save(): Promise<void> {
     saveError.value = result.error ?? 'Erreur inconnue'
   }
   isSaving.value = false
+}
+
+function openLogFolder(): void {
+  window.electron.settings.openLogFolder()
 }
 
 async function checkUpdate(): Promise<void> {

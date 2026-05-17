@@ -2,6 +2,7 @@ import { ipcMain, net } from 'electron'
 import { DatabaseService } from '../services/database.service'
 import { CryptoService } from '../services/crypto.service'
 import { SyncService } from '../services/sync.service'
+import { log } from '../services/logger.service'
 
 function httpPost(url: string, body: unknown, headers: Record<string, string> = {}): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -41,6 +42,7 @@ export function registerAuthIpc(db: DatabaseService, crypto: CryptoService, sync
     }) as { token: string; user: { id: number; name: string; email: string }; expires_at: string }
 
     await crypto.saveToken(result.token)
+    log.info(`Connexion réussie — user=${result.user.email}`)
 
     db.run(
       `INSERT OR REPLACE INTO users (id, name, email, token, updated_at) VALUES (?, ?, ?, ?, datetime('now'))`,

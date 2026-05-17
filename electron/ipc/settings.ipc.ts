@@ -1,4 +1,5 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, shell } from 'electron'
+import { join } from 'path'
 import { SyncService } from '../services/sync.service'
 import { NetworkService } from '../services/network.service'
 
@@ -7,7 +8,12 @@ export function registerSettingsIpc(sync: SyncService, network: NetworkService):
     serverUrl: sync.serverUrl,
     version:   app.getVersion(),
     appName:   app.getName(),
+    logPath:   join(app.getPath('userData'), 'logs', 'main.log'),
   }))
+
+  ipcMain.handle('settings:openLogFolder', () => {
+    shell.openPath(join(app.getPath('userData'), 'logs'))
+  })
 
   ipcMain.handle('settings:setServerUrl', (_event, url: string) => {
     try {

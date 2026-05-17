@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { DatabaseService } from './database.service'
 import { CryptoService } from './crypto.service'
 import { NetworkService } from './network.service'
+import { log } from './logger.service'
 
 interface SyncMeta {
   lastSyncedAt: string | null
@@ -192,10 +193,12 @@ export class SyncService {
       this._meta.lastSyncedAt = pullResult.pulled_at
       this.saveMeta()
 
+      log.info(`Sync terminée — pulled=${pulled} pushed=${pushed} conflicts=${conflicts}`)
       emit?.('sync:completed', { pulled, pushed, conflicts, at: new Date().toISOString() })
 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
+      log.error('Sync échouée', message)
       emit?.('sync:error', { message })
     } finally {
       this.isSyncing = false

@@ -115,9 +115,10 @@ contextBridge.exposeInMainWorld('electron', {
 
   // ── Paramètres ───────────────────────────────────────────────────────────
   settings: {
-    get:            ()           => invoke('settings:get'),
+    get:            ()            => invoke('settings:get'),
     setServerUrl:   (url: string) => invoke('settings:setServerUrl', url),
     testConnection: (url?: string) => invoke('settings:testConnection', url),
+    openLogFolder:  ()            => invoke('settings:openLogFolder'),
   },
 
   // ── Auto-updater ─────────────────────────────────────────────────────────

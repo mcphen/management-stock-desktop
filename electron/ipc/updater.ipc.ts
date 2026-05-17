@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { autoUpdater, UpdateInfo } from 'electron-updater'
+import { log } from '../services/logger.service'
 
 const isDev = !!process.env['VITE_DEV_SERVER_URL']
 
@@ -16,6 +17,7 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
+    log.info(`Mise à jour disponible — version=${info.version}`)
     getWindow()?.webContents.send('updater:available', {
       version:      info.version,
       releaseNotes: info.releaseNotes ?? null,
@@ -23,11 +25,12 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
   })
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
+    log.info(`Mise à jour téléchargée — version=${info.version}`)
     getWindow()?.webContents.send('updater:downloaded', { version: info.version })
   })
 
   autoUpdater.on('error', (err: Error) => {
-    console.error('[updater]', err.message)
+    log.error('[updater]', err.message)
   })
 
   ipcMain.handle('updater:check', async () => {

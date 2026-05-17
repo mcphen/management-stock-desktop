@@ -201,9 +201,10 @@ declare global {
         resolveConflict(conflictId: number, resolution: 'keep_local' | 'keep_server'): Promise<{ success: boolean }>
       }
       settings: {
-        get(): Promise<{ serverUrl: string; version: string; appName: string }>
+        get(): Promise<{ serverUrl: string; version: string; appName: string; logPath: string }>
         setServerUrl(url: string): Promise<{ success: boolean; error?: string }>
         testConnection(url?: string): Promise<{ online: boolean }>
+        openLogFolder(): Promise<void>
       }
       updater: {
         check(): Promise<{ available: boolean; version?: string; devMode?: boolean }>

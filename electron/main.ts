@@ -15,6 +15,7 @@ import { registerCaisseIpc } from './ipc/caisse.ipc'
 import { registerSyncIpc } from './ipc/sync.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
 import { setupUpdater } from './ipc/updater.ipc'
+import { setupLogger, log } from './services/logger.service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -66,15 +67,20 @@ function createWindow(): void {
 }
 
 async function bootstrap(): Promise<void> {
-  // Instanciation APRÈS que app soit prêt (app.getPath disponible)
+  setupLogger()
+  log.info('Bootstrap démarré')
+
   db      = new DatabaseService()
   crypto  = new CryptoService()
   network = new NetworkService()
   sync    = new SyncService(db, crypto, network)
 
   await db.initialize()
+  log.info('Base de données initialisée')
+
   await crypto.initialize()
   sync.initialize()
+  log.info(`Sync initialisé — serveur: ${sync.serverUrl}`)
 
   // Enregistrement des IPC handlers
   registerAuthIpc(db, crypto, sync)
@@ -100,9 +106,11 @@ async function bootstrap(): Promise<void> {
   // Polling connectivité et auto-sync
   network.startPolling(10_000)
   network.onConnectivityChange((isOnline) => {
+    log.info(`Connectivité changée — online=${isOnline}`)
     mainWindow?.webContents.send('network:status', { online: isOnline })
     if (isOnline) {
-      sync.syncAll((event, data) => mainWindow?.webContents.send(event, data)).catch(console.error)
+      sync.syncAll((event, data) => mainWindow?.webContents.send(event, data))
+        .catch((err: Error) => log.error('Sync auto échouée', err.message))
     }
   })
 
@@ -114,6 +122,7 @@ async function bootstrap(): Promise<void> {
 app.whenReady().then(bootstrap)
 
 app.on('window-all-closed', () => {
+  log.info('Fenêtre fermée — arrêt de l\'app')
   sync?.stopAutoSync()
   network?.stopPolling()
   if (process.platform !== 'darwin') app.quit()
