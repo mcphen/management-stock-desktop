@@ -40,3 +40,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           EP_DRAFT: false
         run: npx electron-builder --win --publish always
+
+      - name: Publier la release (retirer le statut draft)
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $release = gh release view $tag --json id,isDraft | ConvertFrom-Json
+          if ($release.isDraft) {
+            gh release edit $tag --draft=false
+            Write-Host "Release $tag publiée."
+          } else {
+            Write-Host "Release $tag déjà publiée."
+          }

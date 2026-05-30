@@ -1,6 +1,6 @@
 {
   "name": "management-stock-desktop",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Application desktop offline-first pour la gestion de stock et facturation",
   "author": "SAMABOIS",
   "main": "dist-electron/main.js",
