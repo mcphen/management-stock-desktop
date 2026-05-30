@@ -13,15 +13,10 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
     return
   }
 
+  process.env['GH_TOKEN'] = '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'
+
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
-
-  autoUpdater.setFeedURL({
-    provider: 'github',
-    owner:    'mcphen',
-    repo:     'management-stock-desktop',
-    token:    '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',
-  })
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
     log.info(`Mise à jour disponible — version=${info.version}`)
