@@ -19,8 +19,8 @@ const router = createRouter({
 
         // Tableaux de bord
         { path: 'dashboard',         name: 'dashboard',         component: () => import('../pages/DashboardPage.vue') },
-        { path: 'dashboard/stock',   name: 'dashboard-stock',   component: () => import('../pages/PlaceholderPage.vue') },
-        { path: 'dashboard/clients', name: 'dashboard-clients', component: () => import('../pages/PlaceholderPage.vue') },
+        { path: 'dashboard/stock',   name: 'dashboard-stock',   component: () => import('../pages/DashboardStockPage.vue') },
+        { path: 'dashboard/clients', name: 'dashboard-clients', component: () => import('../pages/DashboardClientsPage.vue') },
         { path: 'dashboard/caisse',  name: 'dashboard-caisse',  component: () => import('../pages/PlaceholderPage.vue') },
 
         // Gestion des stocks
@@ -41,10 +41,11 @@ const router = createRouter({
         { path: 'clients/comptes', name: 'clients-comptes',  component: () => import('../pages/Clients/Accounts.vue') },
 
         // Finances
-        { path: 'caisse',               name: 'caisse',               component: () => import('../pages/CaissePage.vue') },
-        { path: 'caisse/historique',    name: 'caisse-historique',    component: () => import('../pages/PlaceholderPage.vue') },
-        { path: 'caisse/transfers',     name: 'caisse-transfers',     component: () => import('../pages/PlaceholderPage.vue') },
-        { path: 'depenses-mensuelles',  name: 'depenses-mensuelles',  component: () => import('../pages/PlaceholderPage.vue') },
+        { path: 'caisse',               name: 'caisse',               component: () => import('../pages/Finances/Caisses/CaissePage.vue') },
+        { path: 'caisse/historique',    name: 'caisse-historique',    component: () => import('../pages/Finances/Caisses/HistoriqueCaisse.vue') },
+        { path: 'caisse/transfers',     name: 'caisse-transfers',     component: () => import('../pages/Finances/Caisses/TransfersPage.vue') },
+        { path: 'caisse/:id',           name: 'caisse-show',          component: () => import('../pages/Finances/Caisses/CaisseShowPage.vue') },
+        { path: 'depenses-mensuelles',  name: 'depenses-mensuelles',  component: () => import('../pages/Finances/MonthlyExpenses/Index.vue') },
 
         // Pages conservées (non dans le menu principal)
         { path: 'suppliers',      name: 'suppliers',     component: () => import('../pages/SuppliersPage.vue') },

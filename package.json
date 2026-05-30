@@ -2,17 +2,18 @@
   "name": "management-stock-desktop",
   "version": "1.0.0",
   "description": "Application desktop offline-first pour la gestion de stock et facturation",
+  "author": "SAMABOIS",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev:renderer": "vite",
     "dev:electron": "tsc -p tsconfig.electron.json --watch",
-    "electron:dev": "concurrently -k \"npm run dev:renderer\" \"npm run dev:electron\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 node scripts/electron-launch.js\"",
+    "electron:dev": "tsc -p tsconfig.electron.json && concurrently -k \"npm run dev:renderer\" \"npm run dev:electron\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 node scripts/electron-launch.js\"",
     "start": "node scripts/electron-launch.js",
     "build:renderer": "vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
     "build:win": "npm run build:renderer && npm run build:electron && cross-env ELECTRON_RUN_AS_NODE= electron-builder --win",
     "typecheck": "vue-tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
-    "postinstall": "electron-rebuild -f -w better-sqlite3"
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "axios": "^1.7.2",
@@ -28,7 +29,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.4",
     "@tsconfig/node20": "^20.1.9",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.14.0",
@@ -48,8 +48,9 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.hassan.management-stock",
-    "productName": "Gestion Stock",
+    "appId": "com.samabois.stock",
+    "productName": "SAMABOIS",
+    "artifactName": "${productName} Setup ${version}.${ext}",
     "directories": {
       "output": "release"
     },
@@ -60,7 +61,13 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "license": "build/license.txt",
+      "installerLanguages": [
+        "French"
+      ],
+      "shortcutName": "SAMABOIS",
+      "uninstallDisplayName": "SAMABOIS"
     },
     "files": [
       "dist/**/*",
@@ -71,12 +78,10 @@
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*"
     ],
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "mcphen",
-        "repo": "management-stock-desktop"
-      }
-    ]
+    "publish": {
+      "provider": "github",
+      "owner": "mcphen",
+      "repo": "management-stock-desktop"
+    }
   }
 }

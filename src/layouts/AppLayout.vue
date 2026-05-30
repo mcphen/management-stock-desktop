@@ -15,7 +15,9 @@
         >S</div>
         <div class="min-w-0">
           <p class="text-sm font-bold text-white leading-tight">SAMABOIS</p>
-          <p class="text-[11px] text-slate-500 mt-0.5">Gestion de stock</p>
+          <p class="text-[11px] text-slate-500 mt-0.5">
+            Gestion de stock<span v-if="appVersion"> - v{{ appVersion }}</span>
+          </p>
         </div>
       </div>
 
@@ -139,6 +141,14 @@
 
     <!-- ══ Main content ══════════════════════════════════════ -->
     <main class="flex-1 overflow-y-auto bg-slate-50 flex flex-col">
+      <Transition name="slide-down">
+        <div
+          v-if="sessionExpiredVisible"
+          class="bg-red-600 text-white text-sm text-center py-2.5 px-4 font-medium"
+        >
+          Session expirée — redirection vers la page de connexion…
+        </div>
+      </Transition>
       <UpdateBanner />
       <RouterView v-slot="{ Component, route }" class="flex-1">
         <Transition name="page" mode="out-in">
@@ -153,7 +163,7 @@
 <script setup lang="ts">
 import { ref, watch, defineComponent, h, type PropType, type Component } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import {
   LayoutDashboardIcon,
   PackageIcon,
@@ -172,6 +182,9 @@ const auth   = useAuthStore()
 const sync   = useSyncStore()
 const route  = useRoute()
 const router = useRouter()
+
+const sessionExpiredVisible = ref(false)
+const appVersion = ref('')
 
 // ── Active menu detection ──────────────────────────────────
 const activeMenu = ref<string | null>(null)
@@ -204,13 +217,30 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR')
 }
 
-onMounted(() => sync.init())
+onMounted(() => {
+  sync.init()
+  window.electron.settings.get()
+    .then((info) => { appVersion.value = info.version })
+    .catch(() => { appVersion.value = '' })
+
+  window.electron.on('auth:expired', () => {
+    sessionExpiredVisible.value = true
+    setTimeout(() => {
+      sessionExpiredVisible.value = false
+      auth.logout(router)
+    }, 3000)
+  })
+})
+
+onUnmounted(() => {
+  sync.cleanup()
+})
 
 // ── SidebarGroup ───────────────────────────────────────────
 const SidebarGroup = defineComponent({
   props: {
     label:  String,
-    icon:   Object as PropType<Component>,
+    icon:   [Object, Function] as PropType<Component>,
     name:   String,
     active: Boolean,
   },
@@ -254,6 +284,7 @@ const SidebarGroup = defineComponent({
 })
 
 // ── SidebarLink ────────────────────────────────────────────
+
 const SidebarLink = defineComponent({
   props: { to: String, label: String },
   setup(props) {
@@ -280,3 +311,8 @@ const SidebarLink = defineComponent({
   },
 })
 </script>
+
+<style scoped>
+.slide-down-enter-active, .slide-down-leave-active { transition: all 0.25s ease; }
+.slide-down-enter-from, .slide-down-leave-to       { opacity: 0; transform: translateY(-100%); }
+</style>

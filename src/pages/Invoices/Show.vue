@@ -9,9 +9,14 @@
       ]"
     >
       <div class="flex items-center gap-2">
-        <button class="btn btn-secondary btn-sm" @click="window.electron.print()" :disabled="isLoading">
+        <button class="btn btn-secondary btn-sm" @click="printInvoice" :disabled="isLoading">
           <PrinterIcon :size="13" />
           <span class="hidden sm:inline">Imprimer</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" @click="exportInvoicePdf" :disabled="isLoading || isExportingPdf">
+          <FileDownIcon :size="13" />
+          <span class="hidden sm:inline">{{ isExportingPdf ? 'Export...' : 'Exporter PDF' }}</span>
+          <span class="sm:hidden">PDF</span>
         </button>
         <button
           v-if="invoice && invoice.status !== 'canceled'"
@@ -177,7 +182,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { PrinterIcon, ArrowLeftIcon, XCircleIcon, AlertTriangleIcon, PencilIcon, FileTextIcon } from 'lucide-vue-next'
+import { PrinterIcon, ArrowLeftIcon, XCircleIcon, AlertTriangleIcon, PencilIcon, FileTextIcon, FileDownIcon } from 'lucide-vue-next'
 import PageHeader from '../../components/PageHeader.vue'
 import { useToastStore } from '../../stores/toast.store'
 import type { Invoice, InvoiceItem } from '../../electron.d'
@@ -190,6 +195,7 @@ const invoiceId = Number(route.params.id)
 
 const isLoading     = ref(true)
 const isCanceling   = ref(false)
+const isExportingPdf = ref(false)
 const confirmCancel = ref(false)
 const invoice = ref<Invoice | null>(null)
 const items   = ref<InvoiceItem[]>([])
@@ -231,6 +237,30 @@ function formatVolume(v: number | null | undefined): string {
 
 function formatPrice(p: number | null | undefined): string {
   return new Intl.NumberFormat('de-DE').format(p ? Math.round(p) : 0)
+}
+
+function printInvoice() {
+  window.electron.print()
+}
+
+async function exportInvoicePdf() {
+  if (!invoice.value || isExportingPdf.value) return
+
+  isExportingPdf.value = true
+  try {
+    const result = await window.electron.exportInvoicePdf(invoice.value.id)
+    if (result.error) {
+      toast.show(result.error, 'error')
+      return
+    }
+    if (!result.canceled) {
+      toast.show('Facture exportee en PDF')
+    }
+  } catch {
+    toast.show("Impossible d'exporter la facture en PDF", 'error')
+  } finally {
+    isExportingPdf.value = false
+  }
 }
 
 function statusLabel(s: string) {

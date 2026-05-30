@@ -18,14 +18,24 @@
 /* ── Base ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { font-size: 14px; }
+html {
+  font-size: 14px;
+  background: #f9fafb;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
 
 body {
+  margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #1e293b;
-  background: #f1f5f9;
+  background: #f9fafb;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────── */

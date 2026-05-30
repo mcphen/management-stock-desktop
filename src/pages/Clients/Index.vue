@@ -215,6 +215,9 @@ function syncBadge(s: string) {
   return map[s] ?? { label: s, cls: 'badge-gray' }
 }
 
+void formatAmount
+void syncBadge
+
 function showClient(id: number) {
   router.push(`/clients/${id}`)
 }

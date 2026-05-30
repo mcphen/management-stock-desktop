@@ -66,3 +66,13 @@ src/                    → Renderer process (Vue 3, pas d'accès Node)
 ## Configuration
 
 Modifier l'URL du serveur dans les settings Electron Store (`sync-meta.json` dans AppData).
+
+## Raccourcis clavier
+
+- `Ctrl+P` : imprimer la vue courante
+- `F5` / `Ctrl+R` : rafraichir l'application
+- `Ctrl+Shift+R` : rafraichir sans cache
+- `Ctrl+Q` : quitter l'application
+- `F11` : basculer en plein ecran
+- `Ctrl++` / `Ctrl+-` / `Ctrl+0` : zoom avant, zoom arriere, zoom par defaut
+- `Ctrl+Shift+I` : ouvrir/fermer les DevTools en mode developpement

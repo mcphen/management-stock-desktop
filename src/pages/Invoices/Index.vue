@@ -213,6 +213,9 @@ function statusBadge(s: string) {
   return { pending: 'badge-yellow', validated: 'badge-green', canceled: 'badge-red' }[s] ?? 'badge-gray'
 }
 
+void statusLabel
+void statusBadge
+
 function printInvoice(_id: number) { window.electron.print() }
 
 onMounted(fetchInvoices)

@@ -1,5 +1,9 @@
 import { net } from 'electron'
 
+export class UnauthorizedError extends Error {
+  constructor() { super('HTTP 401: token expiré ou invalide') }
+}
+
 type ConnectivityCallback = (isOnline: boolean) => void
 
 export class NetworkService {
@@ -93,7 +97,9 @@ export class NetworkService {
         resp.on('data', (chunk) => { data += chunk.toString() })
         resp.on('end', () => {
           try {
-            if (resp.statusCode >= 400) {
+            if (resp.statusCode === 401) {
+              reject(new UnauthorizedError())
+            } else if (resp.statusCode >= 400) {
               reject(new Error(`HTTP ${resp.statusCode}: ${data}`))
             } else {
               resolve(JSON.parse(data) as T)

@@ -1,0 +1,17 @@
+SAMABOIS - Licence d'utilisation interne
+
+Copyright (c) 2026 SAMABOIS. Tous droits reserves.
+
+Cette application est fournie exclusivement pour un usage interne par SAMABOIS
+et les utilisateurs autorises par SAMABOIS.
+
+Il est interdit de copier, redistribuer, revendre, louer, modifier ou publier
+cette application, en tout ou en partie, sans autorisation ecrite prealable de
+SAMABOIS.
+
+L'application est fournie en l'etat pour les besoins operationnels internes.
+SAMABOIS se reserve le droit de modifier, suspendre ou retirer l'acces a
+l'application a tout moment.
+
+En installant ou en utilisant cette application, l'utilisateur accepte les
+conditions de cette licence.

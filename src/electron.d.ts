@@ -36,9 +36,11 @@ export interface Supplier {
   updated_at: string
 }
 
+export type ArticleEssence = 'Ayous' | 'Frake' | 'Dibetou' | 'Bois Rouge' | 'Dabema'
+
 export interface Article {
   id: number
-  essence: 'Ayous' | 'Frake' | 'Dibetou' | 'Bois Rouge'
+  essence: ArticleEssence
   supplier_id: number
   contract_number: string | null
   indisponible: boolean
@@ -106,6 +108,18 @@ export interface Payment {
   sync_status: string
 }
 
+export interface Caisse {
+  id: number
+  name: string
+  type: 'especes' | 'banque' | 'mobile_money' | null
+  currency_code: string | null
+  initial_balance: number
+  active: boolean
+  balance_with_initial: number
+  sync_status: string
+  updated_at: string
+}
+
 export interface CaisseTransaction {
   id: number
   type: 'entree' | 'sortie'
@@ -113,7 +127,20 @@ export interface CaisseTransaction {
   objet: string
   description: string | null
   date: string
+  payment_id: number | null
   sync_status: string
+}
+
+export interface MonthlyExpense {
+  id: number
+  month: number
+  year: number
+  amount: number
+  user_id: number | null
+  server_id: number | null
+  sync_status: string
+  created_at: string
+  updated_at: string
 }
 
 export interface SyncStatus {
@@ -188,10 +215,30 @@ declare global {
         create(data: Partial<Payment>): Promise<Payment>
         delete(id: number): Promise<{ success: boolean }>
       }
+      caisses: {
+        list(params?: Record<string, unknown>): Promise<Caisse[]>
+        get(id: number): Promise<Caisse | undefined>
+        create(data: Partial<Caisse>): Promise<Caisse>
+        update(id: number, data: Partial<Caisse>): Promise<Caisse>
+        delete(id: number): Promise<{ success: boolean }>
+      }
       caisse: {
         list(params?: Record<string, unknown>): Promise<PaginatedResponse<CaisseTransaction>>
+        listByCaisse(caisseId: number, params?: Record<string, unknown>): Promise<CaisseTransaction[]>
         solde(): Promise<{ entrees: number; sorties: number; solde: number }>
-        create(data: Partial<CaisseTransaction>): Promise<CaisseTransaction>
+        summary(caisseId: number): Promise<{ entrees: number; sorties: number; transfers_in: number; transfers_out: number }>
+        create(data: Partial<CaisseTransaction> & { caisse_id?: number }): Promise<CaisseTransaction>
+        update(id: number, data: Partial<CaisseTransaction>): Promise<CaisseTransaction>
+        delete(id: number): Promise<{ success: boolean }>
+        transfer(data: { source_caisse_id: number; destination_caisse_id: number; amount_source: number; exchange_rate?: number | null; amount_destination?: number | null; description?: string; transfer_date: string }): Promise<{ success: boolean }>
+        correctPayment(data: { transaction_id: number; amount: number; date: string; description?: string | null; reason?: string | null }): Promise<{ success: boolean }>
+        deletePayment(transactionId: number): Promise<{ success: boolean }>
+      }
+      monthlyExpenses: {
+        list(params?: Record<string, unknown>): Promise<{ data: MonthlyExpense[]; total: number }>
+        get(id: number): Promise<MonthlyExpense | undefined>
+        create(data: Partial<MonthlyExpense>): Promise<MonthlyExpense>
+        update(id: number, data: Partial<MonthlyExpense>): Promise<MonthlyExpense>
         delete(id: number): Promise<{ success: boolean }>
       }
       sync: {
@@ -199,6 +246,7 @@ declare global {
         getStatus(): Promise<SyncStatus>
         getPendingCount(): Promise<number>
         resolveConflict(conflictId: number, resolution: 'keep_local' | 'keep_server'): Promise<{ success: boolean }>
+        resetFull(): Promise<{ success: boolean; pulled?: number; pushed?: number; conflicts?: number; message?: string }>
       }
       settings: {
         get(): Promise<{ serverUrl: string; version: string; appName: string; logPath: string }>
@@ -211,7 +259,42 @@ declare global {
         download(): Promise<void>
         install(): Promise<void>
       }
+      dashboard: {
+        statsGeneral(): Promise<{
+          chiffre_affaires: number
+          chiffre_affaire_old: number
+          montant_paye: number
+          montant_du: number
+          stock_disponible: number
+          soldeCaisse: number
+        }>
+        caBenefice(filters?: Record<string, unknown>): Promise<{
+          year: number; month: number
+          total_revenue: number; cost_base: number
+          gross_profit: number; monthly_expense: number; net_profit: number
+        }[]>
+        evolutionCa(filters?: Record<string, unknown>): Promise<{
+          month: string; total_revenue: number
+        }[]>
+        topClients(): Promise<{ id: number; name: string; total_revenue: number }[]>
+        clientsStats(): Promise<{
+          kpi: {
+            nb_clients: number; total_ca: number; total_paye: number
+            total_du: number; taux_recouvrement: number; nb_clients_avec_creances: number
+          }
+          evolution: { month: string; total_facture: number; total_paye: number }[]
+          clients: {
+            id: number; name: string; total_ca: number; total_paye: number
+            montant_du: number; taux_recouvrement: number; nb_factures: number
+            derniere_facture: string | null
+          }[]
+        }>
+      }
       print(): Promise<void>
+      exportPdf(fileName?: string): Promise<{ canceled: boolean; filePath?: string }>
+      exportInvoicePdf(invoiceId: number): Promise<{ canceled: boolean; filePath?: string; error?: string }>
+      reload(): Promise<void>
+      reportRendererError(data: { message: string; stack?: string }): Promise<void>
       on(channel: string, listener: IpcListener): () => void
     }
   }

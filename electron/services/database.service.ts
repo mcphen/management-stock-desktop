@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
-import { mkdirSync } from 'fs'
+import { copyFileSync, existsSync, mkdirSync } from 'fs'
+import { log } from './logger.service'
 
 export type SyncStatus = 'synced' | 'pending' | 'conflict' | 'deleted_pending'
 
@@ -15,48 +16,23 @@ export interface LocalRecord {
   deleted_at: string | null
 }
 
-export class DatabaseService {
-  private db!: Database.Database
-  private readonly dbPath: string
+// ── Migration definitions ──────────────────────────────────────────────────────
+// Add new entries at the END. Never edit existing ones.
+// Each migration runs in its own transaction; user_version is bumped after commit.
+// For ALTER TABLE, check column existence first (SQLite has no ALTER IF NOT EXISTS).
 
-  constructor() {
-    const userDataPath = app.getPath('userData')
-    mkdirSync(userDataPath, { recursive: true })
-    this.dbPath = join(userDataPath, 'management-stock.db')
-  }
+const SYNC_COLUMNS = `
+  server_id   INTEGER,
+  sync_status TEXT NOT NULL DEFAULT 'pending' CHECK(sync_status IN ('synced','pending','conflict','deleted_pending')),
+  synced_at   TEXT,
+  local_uuid  TEXT NOT NULL DEFAULT (lower(hex(randomblob(16)))),
+  deleted_at  TEXT
+`
 
-  async initialize(): Promise<void> {
-    this.db = new Database(this.dbPath)
-
-    // WAL mode pour de meilleures performances concurrentes
-    this.db.pragma('journal_mode = WAL')
-    this.db.pragma('foreign_keys = ON')
-    this.db.pragma('synchronous = NORMAL')
-
-    this.runMigrations()
-  }
-
-  private runMigrations(): void {
-    const version = (this.db.pragma('user_version', { simple: true }) as number) ?? 0
-
-    if (version < 1) {
-      this.db.exec(this.migration_001())
-      this.db.pragma('user_version = 1')
-    }
-  }
-
-  private syncColumns(): string {
-    return `
-      server_id   INTEGER,
-      sync_status TEXT NOT NULL DEFAULT 'pending' CHECK(sync_status IN ('synced','pending','conflict','deleted_pending')),
-      synced_at   TEXT,
-      local_uuid  TEXT NOT NULL DEFAULT (lower(hex(randomblob(16)))),
-      deleted_at  TEXT
-    `
-  }
-
-  private migration_001(): string {
-    return `
+const MIGRATIONS: ReadonlyArray<{ version: number; sql: string }> = [
+  {
+    version: 1,
+    sql: `
       CREATE TABLE IF NOT EXISTS users (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         name        TEXT NOT NULL,
@@ -79,7 +55,7 @@ export class DatabaseService {
         credit_disponible REAL DEFAULT 0,
         created_at        TEXT DEFAULT (datetime('now')),
         updated_at        TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS suppliers (
@@ -91,7 +67,7 @@ export class DatabaseService {
         email      TEXT,
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS articles (
@@ -106,7 +82,7 @@ export class DatabaseService {
         volume          REAL DEFAULT 0,
         created_at      TEXT DEFAULT (datetime('now')),
         updated_at      TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS article_items (
@@ -121,7 +97,7 @@ export class DatabaseService {
         indisponible  INTEGER DEFAULT 0,
         created_at    TEXT DEFAULT (datetime('now')),
         updated_at    TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS invoices (
@@ -135,21 +111,21 @@ export class DatabaseService {
         status        TEXT DEFAULT 'pending',
         created_at    TEXT DEFAULT (datetime('now')),
         updated_at    TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS invoice_items (
-        id               INTEGER PRIMARY KEY AUTOINCREMENT,
-        invoice_id       INTEGER REFERENCES invoices(id),
-        article_item_id  INTEGER REFERENCES article_items(id),
-        article_id       INTEGER REFERENCES articles(id),
-        price            REAL DEFAULT 0,
-        total_price_item REAL DEFAULT 0,
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        invoice_id            INTEGER REFERENCES invoices(id),
+        article_item_id       INTEGER REFERENCES article_items(id),
+        article_id            INTEGER REFERENCES articles(id),
+        price                 REAL DEFAULT 0,
+        total_price_item      REAL DEFAULT 0,
         nombre_de_colis_vendu INTEGER,
-        volume_vendu     REAL,
-        created_at       TEXT DEFAULT (datetime('now')),
-        updated_at       TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        volume_vendu          REAL,
+        created_at            TEXT DEFAULT (datetime('now')),
+        updated_at            TEXT DEFAULT (datetime('now')),
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS delivery_notes (
@@ -164,21 +140,21 @@ export class DatabaseService {
         notes       TEXT,
         created_at  TEXT DEFAULT (datetime('now')),
         updated_at  TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS delivery_note_items (
-        id                   INTEGER PRIMARY KEY AUTOINCREMENT,
-        delivery_note_id     INTEGER REFERENCES delivery_notes(id),
-        article_item_id      INTEGER REFERENCES article_items(id),
-        article_id           INTEGER REFERENCES articles(id),
-        price                REAL DEFAULT 0,
-        total_price_item     REAL DEFAULT 0,
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        delivery_note_id      INTEGER REFERENCES delivery_notes(id),
+        article_item_id       INTEGER REFERENCES article_items(id),
+        article_id            INTEGER REFERENCES articles(id),
+        price                 REAL DEFAULT 0,
+        total_price_item      REAL DEFAULT 0,
         nombre_de_colis_vendu INTEGER,
-        volume_vendu         REAL,
-        created_at           TEXT DEFAULT (datetime('now')),
-        updated_at           TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        volume_vendu          REAL,
+        created_at            TEXT DEFAULT (datetime('now')),
+        updated_at            TEXT DEFAULT (datetime('now')),
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS payments (
@@ -188,7 +164,7 @@ export class DatabaseService {
         date       TEXT NOT NULL,
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS transactions (
@@ -201,7 +177,7 @@ export class DatabaseService {
         old_transaction  TEXT,
         created_at       TEXT DEFAULT (datetime('now')),
         updated_at       TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
       CREATE TABLE IF NOT EXISTS caisse_transactions (
@@ -215,10 +191,9 @@ export class DatabaseService {
         date           TEXT NOT NULL,
         created_at     TEXT DEFAULT (datetime('now')),
         updated_at     TEXT DEFAULT (datetime('now')),
-        ${this.syncColumns()}
+        ${SYNC_COLUMNS}
       );
 
-      -- Table de suivi des conflits de synchronisation
       CREATE TABLE IF NOT EXISTS sync_conflicts (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name    TEXT NOT NULL,
@@ -230,7 +205,6 @@ export class DatabaseService {
         created_at    TEXT DEFAULT (datetime('now'))
       );
 
-      -- Table de queue des mutations offline
       CREATE TABLE IF NOT EXISTS sync_queue (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
         idempotency_key  TEXT NOT NULL UNIQUE,
@@ -244,7 +218,6 @@ export class DatabaseService {
         created_at       TEXT DEFAULT (datetime('now'))
       );
 
-      -- Index pour les queries de sync (recherche par updated_at)
       CREATE INDEX IF NOT EXISTS idx_clients_updated_at       ON clients(updated_at);
       CREATE INDEX IF NOT EXISTS idx_suppliers_updated_at     ON suppliers(updated_at);
       CREATE INDEX IF NOT EXISTS idx_articles_updated_at      ON articles(updated_at);
@@ -252,10 +225,136 @@ export class DatabaseService {
       CREATE INDEX IF NOT EXISTS idx_invoices_updated_at      ON invoices(updated_at);
       CREATE INDEX IF NOT EXISTS idx_payments_updated_at      ON payments(updated_at);
       CREATE INDEX IF NOT EXISTS idx_sync_queue_table         ON sync_queue(table_name);
-    `
+    `,
+  },
+
+  {
+    version: 2,
+    sql: `
+      CREATE TABLE IF NOT EXISTS caisses (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        name            TEXT NOT NULL,
+        type            TEXT CHECK(type IN ('especes','banque','mobile_money')),
+        currency_code   TEXT DEFAULT 'XOF',
+        initial_balance REAL DEFAULT 0,
+        active          INTEGER NOT NULL DEFAULT 1,
+        created_at      TEXT DEFAULT (datetime('now')),
+        updated_at      TEXT DEFAULT (datetime('now')),
+        ${SYNC_COLUMNS}
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_caisses_updated_at ON caisses(updated_at);
+
+      ALTER TABLE caisse_transactions ADD COLUMN caisse_id INTEGER REFERENCES caisses(id);
+
+      CREATE INDEX IF NOT EXISTS idx_caisse_txn_caisse_id ON caisse_transactions(caisse_id);
+    `,
+  },
+
+  {
+    version: 3,
+    sql: `
+      CREATE TABLE caisses_new (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        name            TEXT NOT NULL,
+        type            TEXT,
+        currency_code   TEXT DEFAULT 'XOF',
+        initial_balance REAL DEFAULT 0,
+        active          INTEGER NOT NULL DEFAULT 1,
+        created_at      TEXT DEFAULT (datetime('now')),
+        updated_at      TEXT DEFAULT (datetime('now')),
+        ${SYNC_COLUMNS}
+      );
+
+      INSERT INTO caisses_new SELECT * FROM caisses;
+      DROP TABLE caisses;
+      ALTER TABLE caisses_new RENAME TO caisses;
+
+      CREATE INDEX IF NOT EXISTS idx_caisses_updated_at ON caisses(updated_at);
+    `,
+  },
+  {
+    version: 4,
+    sql: `
+      CREATE TABLE IF NOT EXISTS monthly_expenses (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        month      INTEGER NOT NULL CHECK(month BETWEEN 1 AND 12),
+        year       INTEGER NOT NULL,
+        amount     REAL NOT NULL DEFAULT 0,
+        user_id    INTEGER,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        ${SYNC_COLUMNS}
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_monthly_expenses_month_year ON monthly_expenses(month, year) WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_monthly_expenses_updated_at ON monthly_expenses(updated_at);
+    `,
+  },
+]
+
+// ── Service ────────────────────────────────────────────────────────────────────
+
+export class DatabaseService {
+  private db!: Database.Database
+  private readonly dbPath: string
+  private readonly migrationBackupDir: string
+
+  constructor() {
+    const userDataPath = app.getPath('userData')
+    mkdirSync(userDataPath, { recursive: true })
+    this.dbPath = join(userDataPath, 'management-stock.db')
+    this.migrationBackupDir = join(userDataPath, 'backups', 'migrations')
   }
 
-  // ── Méthodes génériques ────────────────────────────────────────────────
+  async initialize(): Promise<void> {
+    this.db = new Database(this.dbPath)
+    this.db.pragma('journal_mode = WAL')
+    this.db.pragma('foreign_keys = ON')
+    this.db.pragma('synchronous = NORMAL')
+    this.runMigrations()
+  }
+
+  private runMigrations(): void {
+    const current = (this.db.pragma('user_version', { simple: true }) as number) ?? 0
+    const pending = MIGRATIONS.filter((m) => m.version > current)
+
+    if (pending.length === 0) return
+
+    log.info(`DB migrations: version actuelle=${current}, ${pending.length} en attente`)
+
+    for (const migration of pending) {
+      this.backupBeforeMigration(migration.version)
+
+      // Run the migration SQL in a transaction — rolls back entirely on error
+      this.db.transaction(() => { this.db.exec(migration.sql) })()
+      // Bump user_version only after the transaction commits successfully.
+      // PRAGMA cannot be inside a transaction (it is silently committed immediately
+      // in SQLite regardless), so we set it here, after the fact.
+      this.db.pragma(`user_version = ${migration.version}`)
+      log.info(`DB migration ${migration.version} appliquée`)
+    }
+  }
+
+  // ── Méthodes génériques ────────────────────────────────────────────────────
+
+  private backupBeforeMigration(version: number): void {
+    if (!existsSync(this.dbPath)) return
+
+    mkdirSync(this.migrationBackupDir, { recursive: true })
+
+    // Flush WAL pages into the main DB before copying the file.
+    this.db.pragma('wal_checkpoint(TRUNCATE)')
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const backupPath = join(
+      this.migrationBackupDir,
+      `management-stock.before-v${version}.${timestamp}.db`
+    )
+
+    copyFileSync(this.dbPath, backupPath)
+    log.info(`DB backup before migration ${version}: ${backupPath}`)
+  }
 
   getTableColumns(table: string): string[] {
     return this.all<{ name: string }>(`PRAGMA table_info("${table}")`).map((c) => c.name)
@@ -277,7 +376,7 @@ export class DatabaseService {
     return this.db.transaction(fn)()
   }
 
-  // ── Sync queue ────────────────────────────────────────────────────────────
+  // ── Sync queue ─────────────────────────────────────────────────────────────
 
   enqueueMutation(payload: {
     idempotencyKey: string
@@ -331,7 +430,7 @@ export class DatabaseService {
     return row?.count ?? 0
   }
 
-  // ── Gestion des conflits ──────────────────────────────────────────────────
+  // ── Gestion des conflits ───────────────────────────────────────────────────
 
   saveConflict(payload: {
     tableName: string

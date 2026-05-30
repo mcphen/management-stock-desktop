@@ -141,10 +141,10 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeftIcon, PlusIcon, SaveIcon, UserPlusIcon } from 'lucide-vue-next'
+import { ArrowLeftIcon, SaveIcon, UserPlusIcon } from 'lucide-vue-next'
 import PageHeader from '../../components/PageHeader.vue'
 import { useToastStore } from '../../stores/toast.store'
-import type { Supplier } from '../../electron.d'
+import type { ArticleEssence, Supplier } from '../../electron.d'
 
 const router = useRouter()
 const toast  = useToastStore()
@@ -158,11 +158,11 @@ const suppliers = ref<Supplier[]>([])
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const parsedData  = ref<string[][]>([])
 
-const essences = ['Ayous', 'Frake', 'Dibetou', 'Bois Rouge', 'Dabema']
+const essences: ArticleEssence[] = ['Ayous', 'Frake', 'Dibetou', 'Bois Rouge', 'Dabema']
 
 const form = reactive({
   supplier_id:     '' as number | '',
-  essence:         '',
+  essence:         '' as ArticleEssence | '',
   contract_number: '',
 })
 

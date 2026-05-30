@@ -393,7 +393,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PageHeader from '../../components/PageHeader.vue'
 import { useToastStore } from '../../stores/toast.store'
-import type { Article, ArticleItem, Supplier } from '../../electron.d'
+import type { Article, ArticleEssence, ArticleItem, Supplier } from '../../electron.d'
 
 const router = useRouter()
 const route  = useRoute()
@@ -425,9 +425,9 @@ const confirmDeleteArticle = ref(false)
 const confirmDeleteItem  = ref<number | null>(null)
 
 // ── Forms ──────────────────────────────────────────
-const essences = ['Ayous', 'Frake', 'Dibetou', 'Bois Rouge', 'Dabema']
+const essences: ArticleEssence[] = ['Ayous', 'Frake', 'Dibetou', 'Bois Rouge', 'Dabema']
 
-const editForm = reactive({ supplier_id: 0, essence: '', contract_number: '' })
+const editForm = reactive({ supplier_id: 0, essence: '' as ArticleEssence | '', contract_number: '' })
 
 const newSupplier = reactive({ name: '', address: '', phone: '', email: '' })
 
@@ -519,9 +519,14 @@ function openEditModal() {
 }
 
 async function saveEditArticle() {
+  if (!editForm.essence) return
   isSaving.value = true
   try {
-    await window.electron.articles.update(articleId, { ...editForm })
+    await window.electron.articles.update(articleId, {
+      supplier_id: editForm.supplier_id,
+      essence: editForm.essence,
+      contract_number: editForm.contract_number,
+    })
     toast.show('Article modifié avec succès')
     showModalEdit.value = false
     await loadAll()

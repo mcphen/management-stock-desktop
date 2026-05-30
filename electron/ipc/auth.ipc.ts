@@ -3,6 +3,7 @@ import { DatabaseService } from '../services/database.service'
 import { CryptoService } from '../services/crypto.service'
 import { SyncService } from '../services/sync.service'
 import { log } from '../services/logger.service'
+import { parse, LoginSchema } from './schemas'
 
 function httpPost(url: string, body: unknown, headers: Record<string, string> = {}): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -32,9 +33,8 @@ function httpPost(url: string, body: unknown, headers: Record<string, string> = 
 }
 
 export function registerAuthIpc(db: DatabaseService, crypto: CryptoService, sync: SyncService): void {
-  ipcMain.handle('auth:login', async (_event, { email, password, deviceName }: {
-    email: string; password: string; deviceName: string
-  }) => {
+  ipcMain.handle('auth:login', async (_event, raw: unknown) => {
+    const { email, password, deviceName } = parse(LoginSchema, raw, 'auth:login')
     const result = await httpPost(`${sync.serverUrl}/auth/login`, {
       email,
       password,

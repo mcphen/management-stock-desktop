@@ -96,12 +96,36 @@ contextBridge.exposeInMainWorld('electron', {
     delete: (id: number)                       => invoke('payments:delete', id),
   },
 
-  // ── Caisse ───────────────────────────────────────────────────────────────
+  // ── Comptes Caisse ───────────────────────────────────────────────────────
+  caisses: {
+    list:   (params?: Record<string, unknown>)                      => invoke('caisses:list', params),
+    get:    (id: number)                                            => invoke('caisses:get', id),
+    create: (data: Record<string, unknown>)                         => invoke('caisses:create', data),
+    update: (id: number, data: Record<string, unknown>)             => invoke('caisses:update', id, data),
+    delete: (id: number)                                            => invoke('caisses:delete', id),
+  },
+
+  // ── Transactions Caisse ──────────────────────────────────────────────────
   caisse: {
-    list:   (params?: Record<string, unknown>) => invoke('caisse:list', params),
-    solde:  ()                                 => invoke('caisse:solde'),
-    create: (data: Record<string, unknown>)    => invoke('caisse:create', data),
-    delete: (id: number)                       => invoke('caisse:delete', id),
+    list:          (params?: Record<string, unknown>)                              => invoke('caisse:list', params),
+    listByCaisse:  (caisseId: number, params?: Record<string, unknown>)            => invoke('caisse:listByCaisse', caisseId, params),
+    solde:         ()                                                              => invoke('caisse:solde'),
+    summary:       (caisseId: number)                                             => invoke('caisse:summary', caisseId),
+    create:        (data: Record<string, unknown>)                                 => invoke('caisse:create', data),
+    update:        (id: number, data: Record<string, unknown>)                     => invoke('caisse:update', id, data),
+    delete:        (id: number)                                                    => invoke('caisse:delete', id),
+    transfer:      (data: Record<string, unknown>)                                 => invoke('caisse:transfer', data),
+    correctPayment:(data: Record<string, unknown>)                                 => invoke('caisse:correctPayment', data),
+    deletePayment: (transactionId: number)                                         => invoke('caisse:deletePayment', transactionId),
+  },
+
+  // ── Dépenses mensuelles ──────────────────────────────────────────────────
+  monthlyExpenses: {
+    list:   (params?: Record<string, unknown>)                      => invoke('monthly-expenses:list', params),
+    get:    (id: number)                                            => invoke('monthly-expenses:get', id),
+    create: (data: Record<string, unknown>)                         => invoke('monthly-expenses:create', data),
+    update: (id: number, data: Record<string, unknown>)             => invoke('monthly-expenses:update', id, data),
+    delete: (id: number)                                            => invoke('monthly-expenses:delete', id),
   },
 
   // ── Synchronisation ──────────────────────────────────────────────────────
@@ -111,6 +135,7 @@ contextBridge.exposeInMainWorld('electron', {
     getPendingCount: ()  => invoke('sync:getPendingCount'),
     resolveConflict: (localId: string, resolution: 'keep_local' | 'keep_server') =>
                          invoke('sync:resolveConflict', localId, resolution),
+    resetFull:     ()    => invoke('sync:resetFull'),
   },
 
   // ── Paramètres ───────────────────────────────────────────────────────────
@@ -128,8 +153,21 @@ contextBridge.exposeInMainWorld('electron', {
     install:  () => invoke('updater:install'),
   },
 
+  // ── Dashboard ────────────────────────────────────────────────────────────
+  dashboard: {
+    statsGeneral:  ()              => invoke('dashboard:stats-general'),
+    caBenefice:    (filters?: unknown) => invoke('dashboard:ca-benefice',   filters),
+    evolutionCa:   (filters?: unknown) => invoke('dashboard:evolution-ca',  filters),
+    topClients:    ()              => invoke('dashboard:top-clients'),
+    clientsStats:  ()              => invoke('dashboard:clients-stats'),
+  },
+
   // ── Impression ───────────────────────────────────────────────────────────
   print: () => invoke('app:print'),
+  exportPdf: (fileName?: string) => invoke('app:export-pdf', fileName),
+  exportInvoicePdf: (invoiceId: number) => invoke('app:export-invoice-pdf', invoiceId),
+  reload: () => invoke('app:reload'),
+  reportRendererError: (data: { message: string; stack?: string }) => invoke('app:renderer-error', data),
 
   // ── Événements (renderer écoute le main) ────────────────────────────────
   on,

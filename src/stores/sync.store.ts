@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 
 export type SyncState = 'idle' | 'syncing' | 'error'
 
@@ -10,6 +10,8 @@ export const useSyncStore = defineStore('sync', () => {
   const syncState     = ref<SyncState>('idle')
   const lastError     = ref<string | null>(null)
   const conflictCount = ref(0)
+
+  let _cleanupFns: Array<() => void> = []
 
   const statusLabel = computed(() => {
     if (!isOnline.value)        return 'Hors ligne'
@@ -48,14 +50,16 @@ export const useSyncStore = defineStore('sync', () => {
       syncState.value = 'error'
       lastError.value = (data as { message: string }).message
     })
-
-    // Cleanup au démontage du composant qui appelle init()
-    onUnmounted(() => {
-      cleanupNetwork()
-      cleanupStarted()
-      cleanupDone()
-      cleanupError()
+    const cleanupExpired  = window.electron.on('auth:expired',     () => {
+      syncState.value = 'idle'
     })
+
+    _cleanupFns = [cleanupNetwork, cleanupStarted, cleanupDone, cleanupError, cleanupExpired]
+  }
+
+  function cleanup(): void {
+    _cleanupFns.forEach(fn => fn())
+    _cleanupFns = []
   }
 
   async function syncNow(): Promise<void> {
@@ -82,6 +86,6 @@ export const useSyncStore = defineStore('sync', () => {
   return {
     isOnline, lastSyncedAt, pendingCount, syncState, lastError,
     conflictCount, statusLabel, statusColor,
-    init, syncNow, refreshPendingCount,
+    init, cleanup, syncNow, refreshPendingCount,
   }
 })

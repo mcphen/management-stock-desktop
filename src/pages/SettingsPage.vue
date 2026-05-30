@@ -55,6 +55,34 @@
       </Transition>
     </section>
 
+    <!-- Synchronisation -->
+    <section class="bg-white border rounded-xl p-5 mb-4">
+      <h3 class="font-semibold text-gray-800 mb-1">Synchronisation</h3>
+      <p class="text-xs text-gray-400 mb-4">
+        Si des données du serveur n'apparaissent pas (ex: caisses créées avant la première sync),
+        lancez une resynchronisation complète pour tout récupérer.
+      </p>
+      <div class="flex items-center gap-3">
+        <button
+          @click="resetSync"
+          :disabled="isResetting"
+          class="px-4 py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 disabled:opacity-40 transition-colors"
+        >
+          {{ isResetting ? 'Resynchronisation…' : 'Resync complète' }}
+        </button>
+        <Transition name="fade">
+          <p v-if="resetResult !== null" class="text-xs flex items-center gap-1"
+             :class="resetResult.success ? 'text-emerald-600' : 'text-red-500'">
+            <span>{{ resetResult.success ? '✓' : '✗' }}</span>
+            <span v-if="resetResult.success">
+              {{ resetResult.pulled }} enregistrement(s) récupéré(s)
+            </span>
+            <span v-else>{{ resetResult.message }}</span>
+          </p>
+        </Transition>
+      </div>
+    </section>
+
     <!-- À propos / version -->
     <section class="bg-white border rounded-xl p-5">
       <h3 class="font-semibold text-gray-800 mb-3">Application</h3>
@@ -109,11 +137,13 @@ const serverUrl        = ref('')
 const isTesting        = ref(false)
 const isSaving         = ref(false)
 const isCheckingUpdate = ref(false)
+const isResetting      = ref(false)
 const testResult       = ref<boolean | null>(null)
 const saveSuccess      = ref(false)
 const saveError        = ref('')
 const updateResult     = ref<{ available: boolean; version?: string; devMode?: boolean } | null>(null)
-const appInfo          = ref<{ serverUrl: string; version: string; appName: string } | null>(null)
+const resetResult      = ref<{ success: boolean; pulled?: number; message?: string } | null>(null)
+const appInfo          = ref<{ serverUrl: string; version: string; appName: string; logPath: string } | null>(null)
 
 onMounted(async () => {
   appInfo.value   = await window.electron.settings.get()
@@ -151,6 +181,15 @@ async function checkUpdate(): Promise<void> {
   updateResult.value     = null
   updateResult.value     = await window.electron.updater.check()
   isCheckingUpdate.value = false
+}
+
+async function resetSync(): Promise<void> {
+  isResetting.value  = true
+  resetResult.value  = null
+  const result       = await window.electron.sync.resetFull()
+  resetResult.value  = result
+  isResetting.value  = false
+  setTimeout(() => { resetResult.value = null }, 6000)
 }
 </script>
 
