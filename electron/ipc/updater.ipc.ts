@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, app } from 'electron'
 import { autoUpdater, UpdateInfo } from 'electron-updater'
 import { log } from '../services/logger.service'
 
@@ -36,7 +36,11 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('updater:check', async () => {
     try {
       const result = await autoUpdater.checkForUpdates()
-      return { available: result !== null, version: result?.updateInfo?.version ?? null }
+      if (!result) return { available: false }
+      const current = app.getVersion()
+      const latest  = result.updateInfo.version
+      const available = latest !== current
+      return { available, version: latest }
     } catch {
       return { available: false }
     }
