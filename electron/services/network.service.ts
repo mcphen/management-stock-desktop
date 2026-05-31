@@ -12,7 +12,7 @@ export class NetworkService {
   private pollInterval: ReturnType<typeof setInterval> | null = null
   private checkUrl: string
 
-  constructor(checkUrl = 'http://localhost:8000/api/v1/sync/status') {
+  constructor(checkUrl = 'https://samabois.com/api/v1/sync/status') {
     this.checkUrl = checkUrl
   }
 

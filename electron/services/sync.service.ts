@@ -78,7 +78,7 @@ export class SyncService {
         return JSON.parse(readFileSync(this.metaPath, 'utf8')) as SyncMeta
       } catch { /* ignore */ }
     }
-    return { lastSyncedAt: null, deviceId: uuidv4(), serverUrl: 'http://localhost:8000/api/v1' }
+    return { lastSyncedAt: null, deviceId: uuidv4(), serverUrl: 'https://samabois.com/api/v1' }
   }
 
   private saveMeta(): void {
