@@ -13,7 +13,10 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "build:win": "npm run build:renderer && npm run build:electron && cross-env ELECTRON_RUN_AS_NODE= electron-builder --win",
     "typecheck": "vue-tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "release:patch": "npm version patch && git push origin main --follow-tags",
+    "release:minor": "npm version minor && git push origin main --follow-tags",
+    "release:major": "npm version major && git push origin main --follow-tags"
   },
   "dependencies": {
     "axios": "^1.7.2",
